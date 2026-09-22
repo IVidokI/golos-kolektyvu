@@ -508,7 +508,12 @@
           var html = '';
           for(var j=0;j<matches.length;j++){
             var m = matches[j];
-            var meta = [m.p, m.s].filter(Boolean).join(' · ');
+            var loc = [m.s, m.v, m.c].filter(Boolean);
+            var locUniq = [];
+            for(var k=0;k<loc.length;k++){
+              if(locUniq[locUniq.length-1] !== loc[k]) locUniq.push(loc[k]);
+            }
+            var meta = [m.p].concat(locUniq).filter(Boolean).join(' · ');
             html += '<li data-idx="'+j+'"><div class="nm">'+escapeHtml(m.n)+'</div>'+
                     (meta ? '<div class="meta">'+escapeHtml(meta)+'</div>' : '') + '</li>';
           }
