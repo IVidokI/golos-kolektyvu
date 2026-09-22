@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Голос колективу</title>
 <style>
   :root{
@@ -18,11 +23,14 @@
   }
 
   *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
   body{
     background:var(--bg);
     color:var(--ink);
     font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;
     padding-left:16px;padding-right:16px;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
     -webkit-font-smoothing:antialiased;
   }
   h1,h2,h3,.wordmark{font-family:'Raleway',system-ui,sans-serif;}
@@ -261,6 +269,8 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@700;800&family=Inter:wght@400;500;600;700&display=swap">
+</head>
+<body>
 
 <svg class="xmark" viewBox="0 0 1920 1080" aria-hidden="true"><path fill-rule="nonzero" d="M 801.722656 171.230469 C 827.78125 199.703125 1085.589844 511.910156 1085.589844 511.910156 L 1126.578125 561.832031 C 951.375 767.359375 655.285156 1042.96875 506.296875 1071.289062 C 487.679688 1074.828125 461.632812 1079.265625 433.179688 1080 L 990.710938 1080 C 892.582031 1075.402344 907.976562 1008.285156 970.683594 911.191406 C 1019.390625 835.773438 1163.238281 669.382812 1189.800781 638.832031 L 1319.75 797.097656 L 1551.210938 1080 L 2058.179688 1080 C 2051.640625 1078.78125 2040.519531 1076.710938 2032.371094 1075.09375 C 1977.28125 1064.1875 1873.878906 1024.082031 1804.359375 944.59375 C 1692.121094 816.253906 1386.558594 412.695312 1386.558594 412.695312 C 1578.53125 186.199219 1769 14.289062 1985.46875 0 L 1439.171875 0 C 1555.300781 10.53125 1492.75 81.238281 1440.039062 172.5 C 1426.699219 195.59375 1365.078125 276.835938 1322.589844 331.269531 L 1062.390625 0 L 432.710938 0 C 471.382812 5.210938 661.460938 17.96875 801.722656 171.230469 "/></svg>
 
@@ -654,3 +664,5 @@
 
 })();
 </script>
+</body>
+</html>
