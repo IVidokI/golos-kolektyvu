@@ -1,0 +1,656 @@
+<title>Голос колективу</title>
+<style>
+  :root{
+    --bordo:#671C32;
+    --bordo-dark:#511526;
+    --periwinkle:#9EADE5;
+    --periwinkle-deep:#6E80C4;
+    --gray:#7A868E;
+    --cream:#F1E7DB;
+    --ink:#20161B;
+    --bg:#FFFFFF;
+    --surface:#FFFFFF;
+    --line:#E7E1DA;
+    --danger:#B3372C;
+    --ok:#3E7A52;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(32,22,27,.05),0 8px 24px -12px rgba(103,28,50,.18);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;
+    padding-left:16px;padding-right:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.wordmark{font-family:'Raleway',system-ui,sans-serif;}
+
+  .page{max-width:640px;margin:0 auto;padding-block:0 48px;position:relative;}
+
+  /* ---- watermark X ---- */
+  .xmark{
+    position:fixed;
+    right:-8vw;
+    bottom:-8vw;
+    width:60vw;
+    max-width:520px;
+    opacity:.05;
+    pointer-events:none;
+    z-index:0;
+  }
+  .xmark path{fill:var(--bordo);}
+
+  /* ---- header banner ---- */
+  .banner{
+    background:var(--bordo);
+    color:var(--cream);
+    margin-inline:-16px;
+    padding:18px 16px 16px;
+    border-radius:0 0 20px 20px;
+    position:sticky;
+    top:env(safe-area-inset-top, 0px);
+    z-index:5;
+    overflow:hidden;
+    box-shadow:0 10px 24px -14px rgba(15,10,12,.5);
+  }
+  .banner::after{
+    content:"";
+    position:absolute; inset:0;
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgba(158,173,229,.28), transparent 60%);
+    pointer-events:none;
+  }
+  .banner .logo{
+    display:block;
+    height:40px;
+    width:auto;
+    filter:drop-shadow(0 4px 10px rgba(15,10,12,.28));
+  }
+  .banner h1{
+    margin:10px 0 4px;
+    font-size:clamp(21px,6vw,26px);
+    font-weight:800;
+    letter-spacing:-.01em;
+    text-wrap:balance;
+  }
+  .banner p{
+    margin:0;
+    color:#EADCE0;
+    font-size:13px;
+    max-width:46ch;
+    line-height:1.45;
+  }
+
+  /* ---- content card ---- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    margin-top:20px;
+    padding:22px 18px 24px;
+    position:relative;
+    z-index:1;
+  }
+  .intro{
+    font-size:13.5px;
+    line-height:1.55;
+    color:var(--gray);
+    background:var(--cream);
+    border-radius:10px;
+    padding:12px 14px;
+    margin:0 0 22px;
+  }
+  .intro strong{color:var(--bordo);}
+
+  fieldset{border:0;padding:0;margin:0;}
+  .qgroup{margin-bottom:22px;}
+  .qgroup + .qgroup{padding-top:22px;border-top:1px solid var(--line);}
+  .qlabel{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    font-size:15px;
+    font-weight:600;
+    line-height:1.4;
+    margin-bottom:10px;
+  }
+  .qnum{
+    flex:none;
+    width:26px;height:26px;
+    border-radius:50%;
+    background:var(--bordo);
+    color:var(--cream);
+    font-family:'Raleway',sans-serif;
+    font-weight:800;
+    font-size:12.5px;
+    display:flex;align-items:center;justify-content:center;
+    margin-top:1px;
+  }
+  .qhint{
+    font-size:12.5px;
+    font-weight:400;
+    color:var(--gray);
+    margin:2px 0 0;
+  }
+  .section-title{
+    font-family:'Raleway',sans-serif;
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--periwinkle-deep);
+    margin:0 0 16px;
+  }
+
+  /* ---- combobox picker ---- */
+  .combo{position:relative;}
+  .combo input[type="text"]{
+    width:100%;
+    font:inherit;
+    font-size:15px;
+    padding:11px 40px 11px 13px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    background:#fff;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .combo input[type="text"]::placeholder{color:#B7AFA8;}
+  .combo input[type="text"]:focus{
+    border-color:var(--periwinkle-deep);
+    box-shadow:0 0 0 3px rgba(158,173,229,.35);
+  }
+  .picker.filled .combo input[type="text"]{
+    border-color:var(--ok);
+    background:#F6FAF7;
+  }
+  .picker.error .combo input[type="text"]{
+    border-color:var(--danger);
+    box-shadow:0 0 0 3px rgba(179,55,44,.15);
+  }
+  .combo-icon{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    font-size:15px;color:var(--gray);pointer-events:none;
+  }
+  .picker.filled .combo-icon{color:var(--ok);}
+  .combo-list{
+    list-style:none;margin:6px 0 0;padding:6px;
+    position:absolute;left:0;right:0;top:100%;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    box-shadow:0 12px 28px -10px rgba(32,22,27,.25);
+    max-height:280px;overflow-y:auto;
+    z-index:20;
+  }
+  .combo-list li{
+    padding:8px 10px;border-radius:7px;cursor:pointer;
+  }
+  .combo-list li .nm{font-size:14.5px;color:var(--ink);}
+  .combo-list li .meta{font-size:12px;color:var(--gray);margin-top:1px;}
+  .combo-list li:hover,.combo-list li.active{background:var(--cream);}
+  .combo-list .empty{
+    padding:10px;font-size:13px;color:var(--gray);cursor:default;
+  }
+  .combo-list .empty:hover{background:none;}
+
+  .err-msg{
+    font-size:12.5px;color:var(--danger);margin-top:6px;display:none;
+  }
+  .picker.error .err-msg{display:block;}
+
+  /* ---- submit ---- */
+  .submit-row{margin-top:6px;}
+  .btn{
+    appearance:none;border:none;cursor:pointer;
+    width:100%;
+    font-family:'Raleway',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:.01em;
+    padding:15px 18px;
+    border-radius:12px;
+    background:var(--bordo);
+    color:var(--cream);
+    transition:background .15s, transform .1s;
+  }
+  .btn:hover{background:var(--bordo-dark);}
+  .btn:active{transform:scale(.99);}
+  .btn:disabled{background:#CBB9BF;cursor:not-allowed;}
+
+  .form-status{
+    margin-top:12px;
+    font-size:13px;
+    line-height:1.5;
+    text-align:center;
+    min-height:18px;
+  }
+  .form-status.err{color:var(--danger);}
+  .form-status.warn{color:#8A5A00;}
+
+  /* ---- thanks view ---- */
+  .thanks{
+    text-align:center;
+    padding:26px 8px 10px;
+  }
+  .thanks .mark{
+    width:56px;height:56px;border-radius:50%;
+    background:var(--cream);
+    color:var(--bordo);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 16px;
+    font-size:26px;
+  }
+  .thanks h2{margin:0 0 8px;font-size:22px;color:var(--bordo);}
+  .thanks p{margin:0 auto 22px;max-width:38ch;color:var(--gray);font-size:14px;line-height:1.55;}
+
+  .foot{
+    text-align:center;
+    color:var(--gray);
+    font-size:12px;
+    margin-top:22px;
+    position:relative;z-index:1;
+  }
+
+  [hidden]{display:none!important;}
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@700;800&family=Inter:wght@400;500;600;700&display=swap">
+
+<svg class="xmark" viewBox="0 0 1920 1080" aria-hidden="true"><path fill-rule="nonzero" d="M 801.722656 171.230469 C 827.78125 199.703125 1085.589844 511.910156 1085.589844 511.910156 L 1126.578125 561.832031 C 951.375 767.359375 655.285156 1042.96875 506.296875 1071.289062 C 487.679688 1074.828125 461.632812 1079.265625 433.179688 1080 L 990.710938 1080 C 892.582031 1075.402344 907.976562 1008.285156 970.683594 911.191406 C 1019.390625 835.773438 1163.238281 669.382812 1189.800781 638.832031 L 1319.75 797.097656 L 1551.210938 1080 L 2058.179688 1080 C 2051.640625 1078.78125 2040.519531 1076.710938 2032.371094 1075.09375 C 1977.28125 1064.1875 1873.878906 1024.082031 1804.359375 944.59375 C 1692.121094 816.253906 1386.558594 412.695312 1386.558594 412.695312 C 1578.53125 186.199219 1769 14.289062 1985.46875 0 L 1439.171875 0 C 1555.300781 10.53125 1492.75 81.238281 1440.039062 172.5 C 1426.699219 195.59375 1365.078125 276.835938 1322.589844 331.269531 L 1062.390625 0 L 432.710938 0 C 471.382812 5.210938 661.460938 17.96875 801.722656 171.230469 "/></svg>
+
+<div class="page">
+
+  <header class="banner">
+    <img class="logo" src="logo-white.png" alt="ЦарХліб">
+    <h1>Голос колективу</h1>
+    <p>Анкетування співробітників Першого столичного хлібозаводу. Оберіть колег, чия робота найбільше заслуговує на визнання.</p>
+  </header>
+
+  <main class="card">
+
+    <div id="formView">
+      <p class="intro"><strong>Як заповнити:</strong> дайте відповідь на всі 7 питань і натисніть «Зберегти відповідь». Анкета анонімна для колег, яких ви згадуєте, — обов'язковим є лише ваше власне ім'я. Форма підходить для проходження на спільному пристрої: після збереження вона одразу очищається для наступної людини.</p>
+
+      <form id="surveyForm" novalidate>
+
+        <div class="qgroup">
+          <div class="picker" data-field="respondent">
+            <div class="qlabel"><span class="qnum">1</span><span>Оберіть своє прізвище, ім'я по батькові</span></div>
+            <div class="combo">
+              <input type="text" class="combo-input" autocomplete="off" placeholder="Почніть вводити прізвище…" aria-label="Ваше ПІБ">
+              <input type="hidden" class="combo-value">
+              <span class="combo-icon">🔍</span>
+              <ul class="combo-list" hidden></ul>
+            </div>
+            <p class="err-msg">Оберіть своє ім'я зі списку.</p>
+          </div>
+        </div>
+
+        <p class="section-title">Оцініть колег</p>
+
+        <div class="qgroup">
+          <div class="picker" data-field="q2">
+            <div class="qlabel"><span class="qnum">2</span><span>Хто з колег завжди готовий допомогти та підтримати інших?</span></div>
+            <div class="combo">
+              <input type="text" class="combo-input" autocomplete="off" placeholder="Почніть вводити прізвище…">
+              <input type="hidden" class="combo-value">
+              <span class="combo-icon">🔍</span>
+              <ul class="combo-list" hidden></ul>
+            </div>
+            <p class="err-msg">Оберіть колегу зі списку.</p>
+          </div>
+        </div>
+
+        <div class="qgroup">
+          <div class="picker" data-field="q3">
+            <div class="qlabel"><span class="qnum">3</span><span>Хто з колег вміє добре організувати свою роботу та якісно виконує завдання?</span></div>
+            <div class="combo">
+              <input type="text" class="combo-input" autocomplete="off" placeholder="Почніть вводити прізвище…">
+              <input type="hidden" class="combo-value">
+              <span class="combo-icon">🔍</span>
+              <ul class="combo-list" hidden></ul>
+            </div>
+            <p class="err-msg">Оберіть колегу зі списку.</p>
+          </div>
+        </div>
+
+        <div class="qgroup">
+          <div class="picker" data-field="q4">
+            <div class="qlabel"><span class="qnum">4</span><span>Хто з колег добре знає свою роботу та дотримується всіх поставлених вимог?</span></div>
+            <div class="combo">
+              <input type="text" class="combo-input" autocomplete="off" placeholder="Почніть вводити прізвище…">
+              <input type="hidden" class="combo-value">
+              <span class="combo-icon">🔍</span>
+              <ul class="combo-list" hidden></ul>
+            </div>
+            <p class="err-msg">Оберіть колегу зі списку.</p>
+          </div>
+        </div>
+
+        <div class="qgroup">
+          <div class="picker" data-field="q5">
+            <div class="qlabel"><span class="qnum">5</span><span>Хто з колег не залишає роботу незавершеною та прагне отримати хороший результат?</span></div>
+            <div class="combo">
+              <input type="text" class="combo-input" autocomplete="off" placeholder="Почніть вводити прізвище…">
+              <input type="hidden" class="combo-value">
+              <span class="combo-icon">🔍</span>
+              <ul class="combo-list" hidden></ul>
+            </div>
+            <p class="err-msg">Оберіть колегу зі списку.</p>
+          </div>
+        </div>
+
+        <div class="qgroup">
+          <div class="picker" data-field="q6">
+            <div class="qlabel"><span class="qnum">6</span><span>На кого з колег ви можете розраховувати у роботі?</span></div>
+            <div class="combo">
+              <input type="text" class="combo-input" autocomplete="off" placeholder="Почніть вводити прізвище…">
+              <input type="hidden" class="combo-value">
+              <span class="combo-icon">🔍</span>
+              <ul class="combo-list" hidden></ul>
+            </div>
+            <p class="err-msg">Оберіть колегу зі списку.</p>
+          </div>
+        </div>
+
+        <div class="qgroup">
+          <div class="picker" data-field="q7">
+            <div class="qlabel"><span class="qnum">7</span><span>Якби потрібно було обрати лише одного кращого працівника — кого б ви обрали?</span></div>
+            <p class="qhint">Кращий працівник отримує 3 бали в загальному рейтингу.</p>
+            <div class="combo">
+              <input type="text" class="combo-input" autocomplete="off" placeholder="Почніть вводити прізвище…">
+              <input type="hidden" class="combo-value">
+              <span class="combo-icon">🔍</span>
+              <ul class="combo-list" hidden></ul>
+            </div>
+            <p class="err-msg">Оберіть колегу зі списку.</p>
+          </div>
+        </div>
+
+        <div class="submit-row">
+          <button type="submit" class="btn" id="submitBtn">Зберегти відповідь</button>
+          <p class="form-status" id="formStatus"></p>
+        </div>
+
+      </form>
+    </div>
+
+    <div id="thanksView" hidden>
+      <div class="thanks">
+        <div class="mark">✓</div>
+        <h2>Дякуємо!</h2>
+        <p>Вашу відповідь збережено. Передайте пристрій наступному співробітнику.</p>
+        <button type="button" class="btn" id="againBtn">Заповнити ще одну анкету</button>
+      </div>
+    </div>
+
+  </main>
+
+  <p class="foot">ПСХ · Перший столичний хлібозавод · Анкетування 2026</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Google Sheets / Apps Script web app ----------
+  // Замініть на URL, який видасть Google після розгортання Apps Script
+  // (закінчується на /exec). Див. інструкцію, яку надав адміністратор.
+  var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqAM0PZ5zoCevXvdqKxeMXBB2YAXvtuL7PDNDjyksvZU5uMR9HaHzOmgYe-L6ZzCBEgA/exec";
+
+  var storageReady = APPS_SCRIPT_URL.indexOf("REPLACE_WITH") !== 0;
+
+  function saveResponse(values){
+    return fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify(values)
+    }).then(function(r){ return r.json(); });
+  }
+
+  // Список співробітників НЕ зберігається на сторінці — кожен пошук іде
+  // запитом на сервер (Apps Script), і повертає лише 40 збігів на конкретний
+  // запит, а не весь список. Мінімум 2 літери, щоб не ганяти зайві запити.
+  function searchEmployees(query){
+    var url = APPS_SCRIPT_URL + '?q=' + encodeURIComponent(query);
+    return fetch(url).then(function(r){ return r.json(); }).then(function(data){
+      return data.results || [];
+    });
+  }
+
+  // ---------- searchable picker ----------
+  function normalize(s){ return (s || '').toLowerCase(); }
+
+  function initPicker(root){
+    var input = root.querySelector('.combo-input');
+    var hidden = root.querySelector('.combo-value');
+    var list = root.querySelector('.combo-list');
+    var activeIndex = -1;
+    var currentItems = [];
+    var debounceTimer = null;
+    var requestSeq = 0;
+
+    function closeList(){
+      list.hidden = true;
+      activeIndex = -1;
+    }
+
+    function markFilled(isFilled){
+      root.classList.toggle('filled', !!isFilled);
+      root.classList.remove('error');
+    }
+
+    function clearValue(){
+      hidden.value = '';
+      markFilled(false);
+    }
+
+    function selectItem(item){
+      hidden.value = item.n;
+      input.value = item.n;
+      markFilled(true);
+      closeList();
+    }
+
+    function renderList(query){
+      var q = normalize(query).trim();
+      clearTimeout(debounceTimer);
+
+      if(q.length < 2){
+        list.innerHTML = '<li class="empty">Введіть щонайменше 2 літери…</li>';
+        currentItems = [];
+        activeIndex = -1;
+        list.hidden = false;
+        return;
+      }
+
+      list.innerHTML = '<li class="empty">Пошук…</li>';
+      list.hidden = false;
+
+      var mySeq = ++requestSeq;
+      debounceTimer = setTimeout(function(){
+        searchEmployees(q).then(function(matches){
+          if(mySeq !== requestSeq) return; // застаріла відповідь — ігноруємо
+          currentItems = matches;
+          activeIndex = -1;
+
+          if(matches.length === 0){
+            list.innerHTML = '<li class="empty">Нікого не знайдено</li>';
+            return;
+          }
+          var html = '';
+          for(var j=0;j<matches.length;j++){
+            var m = matches[j];
+            var meta = [m.p, m.s].filter(Boolean).join(' · ');
+            html += '<li data-idx="'+j+'"><div class="nm">'+escapeHtml(m.n)+'</div>'+
+                    (meta ? '<div class="meta">'+escapeHtml(meta)+'</div>' : '') + '</li>';
+          }
+          list.innerHTML = html;
+        }).catch(function(){
+          if(mySeq !== requestSeq) return;
+          list.innerHTML = '<li class="empty">Помилка пошуку. Перевірте з’єднання.</li>';
+        });
+      }, 250);
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      });
+    }
+
+    function setActive(idx){
+      var items = list.querySelectorAll('li[data-idx]');
+      items.forEach(function(li){ li.classList.remove('active'); });
+      if(idx >= 0 && items[idx]){
+        items[idx].classList.add('active');
+        items[idx].scrollIntoView({block:'nearest'});
+      }
+      activeIndex = idx;
+    }
+
+    input.addEventListener('input', function(){
+      clearValue();
+      renderList(input.value);
+    });
+
+    input.addEventListener('focus', function(){
+      if(input.value) renderList(input.value);
+    });
+
+    input.addEventListener('keydown', function(ev){
+      if(list.hidden && (ev.key === 'ArrowDown')){
+        renderList(input.value);
+        return;
+      }
+      if(list.hidden) return;
+      if(ev.key === 'ArrowDown'){
+        ev.preventDefault();
+        setActive(Math.min(activeIndex + 1, currentItems.length - 1));
+      } else if(ev.key === 'ArrowUp'){
+        ev.preventDefault();
+        setActive(Math.max(activeIndex - 1, 0));
+      } else if(ev.key === 'Enter'){
+        ev.preventDefault();
+        if(activeIndex >= 0 && currentItems[activeIndex]) selectItem(currentItems[activeIndex]);
+      } else if(ev.key === 'Escape'){
+        closeList();
+      }
+    });
+
+    list.addEventListener('mousedown', function(ev){
+      var li = ev.target.closest('li[data-idx]');
+      if(!li) return;
+      ev.preventDefault();
+      var idx = parseInt(li.getAttribute('data-idx'), 10);
+      if(currentItems[idx]) selectItem(currentItems[idx]);
+    });
+
+    document.addEventListener('click', function(ev){
+      if(!root.contains(ev.target)) closeList();
+    });
+
+    return {
+      getValue: function(){ return hidden.value; },
+      setError: function(on){ root.classList.toggle('error', !!on); },
+      focus: function(){ input.focus(); },
+      reset: function(){ input.value = ''; clearValue(); closeList(); root.classList.remove('error'); }
+    };
+  }
+
+  var pickerNodes = document.querySelectorAll('.picker');
+  var pickers = {};
+  pickerNodes.forEach(function(node){
+    pickers[node.getAttribute('data-field')] = initPicker(node);
+  });
+
+  var form = document.getElementById('surveyForm');
+  var statusEl = document.getElementById('formStatus');
+  var submitBtn = document.getElementById('submitBtn');
+  var formView = document.getElementById('formView');
+  var thanksView = document.getElementById('thanksView');
+
+  var FIELDS = ['respondent','q2','q3','q4','q5','q6','q7'];
+
+  function setStatus(msg, kind){
+    statusEl.textContent = msg || '';
+    statusEl.className = 'form-status' + (kind ? ' ' + kind : '');
+  }
+
+  function resetForm(){
+    FIELDS.forEach(function(f){ pickers[f].reset(); });
+    setStatus(storageReady ? '' : 'Адміністратор ще не підключив збереження відповідей у Google Таблицю.', storageReady ? '' : 'warn');
+    pickers.respondent.focus();
+  }
+
+  if(!storageReady){
+    submitBtn.disabled = true;
+    setStatus('Адміністратор ще не підключив збереження відповідей у Google Таблицю.', 'warn');
+  }
+
+  form.addEventListener('submit', function(ev){
+    ev.preventDefault();
+
+    if(!storageReady){
+      setStatus('Адміністратор ще не підключив збереження відповідей у Google Таблицю.', 'warn');
+      return;
+    }
+    setStatus('');
+
+    var values = {};
+    var firstInvalid = null;
+    FIELDS.forEach(function(f){
+      var v = pickers[f].getValue();
+      var ok = !!v;
+      pickers[f].setError(!ok);
+      if(ok){ values[f] = v; }
+      else if(!firstInvalid){ firstInvalid = f; }
+    });
+
+    if(firstInvalid){
+      setStatus('Будь ласка, заповніть усі поля анкети перед збереженням.', 'err');
+      pickers[firstInvalid].focus();
+      return;
+    }
+
+    submitBtn.disabled = true;
+    setStatus('Зберігаємо…');
+
+    saveResponse({
+      respondent: values.respondent,
+      q2: values.q2,
+      q3: values.q3,
+      q4: values.q4,
+      q5: values.q5,
+      q6: values.q6,
+      q7_employee: values.q7,
+      q7_points: 3
+    }).then(function(res){
+      submitBtn.disabled = false;
+      if(res && res.status === 'ok'){
+        formView.hidden = true;
+        thanksView.hidden = false;
+        setStatus('');
+      } else {
+        setStatus((res && res.message) || 'Не вдалося зберегти відповідь. Спробуйте ще раз.', 'err');
+      }
+    }).catch(function(){
+      submitBtn.disabled = false;
+      setStatus('Не вдалося з’єднатися з таблицею. Перевірте інтернет-з’єднання і спробуйте ще раз.', 'err');
+    });
+  });
+
+  document.getElementById('againBtn').addEventListener('click', function(){
+    thanksView.hidden = true;
+    formView.hidden = false;
+    resetForm();
+  });
+
+})();
+</script>
