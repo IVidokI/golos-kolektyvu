@@ -437,7 +437,9 @@
   // ---------- searchable picker ----------
   function normalize(s){ return (s || '').toLowerCase(); }
 
-  function initPicker(root){
+  function initPicker(root, opts){
+    opts = opts || {};
+    var fieldName = root.getAttribute('data-field');
     var input = root.querySelector('.combo-input');
     var hidden = root.querySelector('.combo-value');
     var list = root.querySelector('.combo-list');
@@ -466,6 +468,7 @@
       input.value = item.n;
       markFilled(true);
       closeList();
+      if(opts.onSelect) opts.onSelect(item.n);
     }
 
     function renderList(query){
@@ -487,6 +490,14 @@
       debounceTimer = setTimeout(function(){
         searchEmployees(q).then(function(matches){
           if(mySeq !== requestSeq) return; // застаріла відповідь — ігноруємо
+
+          if(fieldName !== 'respondent' && pickers.respondent){
+            var selfName = pickers.respondent.getValue();
+            if(selfName){
+              matches = matches.filter(function(m){ return m.n !== selfName; });
+            }
+          }
+
           currentItems = matches;
           activeIndex = -1;
 
@@ -577,7 +588,20 @@
   var pickerNodes = document.querySelectorAll('.picker');
   var pickers = {};
   pickerNodes.forEach(function(node){
-    pickers[node.getAttribute('data-field')] = initPicker(node);
+    var field = node.getAttribute('data-field');
+    var opts = {};
+    if(field === 'respondent'){
+      opts.onSelect = function(name){
+        // якщо колега вже обраний в іншому пункті і збігається з новим "я" — скидаємо
+        ['q2','q3','q4','q5','q6','q7'].forEach(function(f){
+          if(pickers[f] && pickers[f].getValue() === name){
+            pickers[f].reset();
+          }
+        });
+        checkVotedStatus(name);
+      };
+    }
+    pickers[field] = initPicker(node, opts);
   });
 
   var form = document.getElementById('surveyForm');
@@ -595,8 +619,36 @@
 
   function resetForm(){
     FIELDS.forEach(function(f){ pickers[f].reset(); });
+    votedBlock = false;
     setStatus(storageReady ? '' : 'Адміністратор ще не підключив збереження відповідей у Google Таблицю.', storageReady ? '' : 'warn');
+    submitBtn.disabled = !storageReady;
     pickers.respondent.focus();
+  }
+
+  // Чи вже голосував цей респондент — перевіряємо одразу після вибору
+  // імені (крім остаточної перевірки при збереженні на сервері).
+  var votedBlock = false;
+  var votedCheckSeq = 0;
+  function checkVotedStatus(name){
+    if(!storageReady || !name) return;
+    var mySeq = ++votedCheckSeq;
+    fetch(APPS_SCRIPT_URL + '?checkVoted=' + encodeURIComponent(name))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(mySeq !== votedCheckSeq) return;
+        if(data.voted){
+          votedBlock = true;
+          pickers.respondent.setError(true);
+          setStatus('Анкету від імені «' + name + '» вже заповнено раніше. Повторне голосування неможливе.', 'err');
+          submitBtn.disabled = true;
+        } else {
+          votedBlock = false;
+          pickers.respondent.setError(false);
+          setStatus('');
+          submitBtn.disabled = false;
+        }
+      })
+      .catch(function(){ /* мережева похибка тут не критична — фінальну перевірку зробить сервер при збереженні */ });
   }
 
   if(!storageReady){
@@ -609,6 +661,10 @@
 
     if(!storageReady){
       setStatus('Адміністратор ще не підключив збереження відповідей у Google Таблицю.', 'warn');
+      return;
+    }
+    if(votedBlock){
+      setStatus('Ця анкета вже заповнена раніше. Повторне голосування неможливе.', 'err');
       return;
     }
     setStatus('');
