@@ -240,6 +240,13 @@
     color:var(--cream);
   }
 
+  /* ---- скринінг (дисципліна / стаж) перед формою оцінки ---- */
+  .screen-card .crit-label{font-size:13.5px;}
+  .screen-card .hint{display:block;font-size:11.5px;color:var(--gray);font-weight:400;margin-top:2px;}
+  .screen-card.excluded{border-color:var(--danger);background:#FBF2F1;opacity:.7;}
+  .screen-card.excluded .cand-name{text-decoration:line-through;}
+  .screen-result{margin:8px 0 0;font-size:12.5px;color:var(--danger);font-weight:600;}
+
   .submit-row{margin-top:6px;}
   .btn{
     appearance:none;border:none;cursor:pointer;
@@ -323,6 +330,17 @@
       <p class="form-status" id="step1Status"></p>
     </div>
 
+    <div id="screenView" hidden>
+      <div class="intro">
+        <strong>Перед оцінкою</strong> — дайте відповідь на два допускові питання по кожному кандидату. Якщо хоча б одна відповідь — «Так», кандидат не потрапляє до списку оцінювання (а на його місце, якщо можливо, підставиться наступний за голосами 1-го туру).
+      </div>
+      <div id="screenGroupsContainer"></div>
+      <div class="submit-row">
+        <button type="button" class="btn" id="screenContinueBtn" disabled>Продовжити до оцінювання</button>
+        <p class="form-status" id="screenStatus"></p>
+      </div>
+    </div>
+
     <div id="formView" hidden>
       <div class="intro criteria-legend">
         <strong>Критерії оцінки</strong> — по кожному з 5 пунктів оцініть кожного кандидата:
@@ -385,11 +403,11 @@
     return fetch(url).then(function(r){ return r.json(); });
   }
 
-  function submitTour2(evaluator, scores){
+  function submitTour2(evaluator, scores, screening){
     return fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: {'Content-Type': 'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action: 'tour2', evaluator: evaluator, scores: scores })
+      body: JSON.stringify({ action: 'tour2', evaluator: evaluator, scores: scores, screening: screening })
     }).then(function(r){ return r.json(); });
   }
 
@@ -498,7 +516,13 @@
   var CRIT_LABELS = ['Відповідальність', 'Професійність', 'Якість роботи', 'Командна робота', 'Ініціативність'];
   var state = {}; // candName -> {group, b: [null,null,null,null,null]}
   var currentEvaluator = '';
+  var screenState = {}; // gid -> {label, win, cardsEl, reserve:[], answers:{candName:{d,t,p}}, order:[]}
+  var screeningRecords = []; // плоский список для аудиту при відправці
 
+  var screenView = document.getElementById('screenView');
+  var screenGroupsContainer = document.getElementById('screenGroupsContainer');
+  var screenContinueBtn = document.getElementById('screenContinueBtn');
+  var screenStatus = document.getElementById('screenStatus');
   var formView = document.getElementById('formView');
   var alreadyView = document.getElementById('alreadyView');
   var thanksView = document.getElementById('thanksView');
@@ -510,6 +534,7 @@
   function onEvaluatorChosen(name){
     currentEvaluator = name;
     step1Status.textContent = 'Завантаження…';
+    screenView.hidden = true;
     formView.hidden = true;
     alreadyView.hidden = true;
 
@@ -524,12 +549,160 @@
         alreadyView.hidden = false;
         return;
       }
-      renderGroups(res.groups);
-      formView.hidden = false;
+      renderScreening(res.groups);
+      screenView.hidden = false;
     }).catch(function(){
       step1Status.textContent = 'Помилка завантаження. Перевірте з’єднання і спробуйте ще раз.';
     });
   }
+
+  // ---------- крок 1: скринінг (дисципліна / стаж) ----------
+
+  function renderScreening(groups){
+    screenState = {};
+    screeningRecords = [];
+    screenGroupsContainer.innerHTML = '';
+
+    groups.forEach(function(g, gi){
+      var gid = 'g' + gi;
+      var wrap = document.createElement('div');
+      wrap.className = 'group-block';
+      wrap.innerHTML = '<p class="group-title">' + escapeHtml(g.label) + '</p>' +
+                        '<p class="group-hint">Переможців у цій групі: ' + g.win + '</p>' +
+                        '<div class="screen-cards"></div>';
+      screenGroupsContainer.appendChild(wrap);
+
+      screenState[gid] = {
+        label: g.label,
+        win: g.win,
+        cardsEl: wrap.querySelector('.screen-cards'),
+        reserve: (g.reserve || []).slice(),
+        answers: {},
+        order: []
+      };
+      g.candidates.forEach(function(c){ appendScreenCard(gid, c); });
+    });
+
+    updateScreenContinueState();
+  }
+
+  function appendScreenCard(gid, cand){
+    var st = screenState[gid];
+    st.answers[cand.n] = { d: null, t: null, p: cand.p };
+    st.order.push(cand.n);
+
+    var div = document.createElement('div');
+    div.className = 'cand-card screen-card';
+    div.setAttribute('data-cand', cand.n);
+    div.setAttribute('data-gid', gid);
+    div.innerHTML =
+      '<div class="cand-head"><span class="cand-name">' + escapeHtml(cand.n) + '</span><span class="cand-posada">' + escapeHtml(cand.p || '') + '</span></div>' +
+      '<div class="crit-row" data-q="d">' +
+        '<span class="crit-label">Чи було порушення трудової дисципліни?</span>' +
+        '<div class="score-pills"><button type="button" class="score-pill" data-val="0">Ні</button><button type="button" class="score-pill" data-val="1">Так</button></div>' +
+      '</div>' +
+      '<div class="crit-row" data-q="t">' +
+        '<span class="crit-label">Стаж менше 6 місяців?<span class="hint">Стажування і робочий час зараховуються разом (напр. 3 міс. стажування + 3 міс. роботи = 6 міс., стажу вистачає).</span></span>' +
+        '<div class="score-pills"><button type="button" class="score-pill" data-val="0">Ні</button><button type="button" class="score-pill" data-val="1">Так</button></div>' +
+      '</div>' +
+      '<p class="screen-result" hidden></p>';
+
+    st.cardsEl.appendChild(div);
+  }
+
+  screenGroupsContainer.addEventListener('click', function(ev){
+    var btn = ev.target.closest('.score-pill');
+    if(!btn) return;
+    var card = btn.closest('.screen-card');
+    var row = btn.closest('.crit-row');
+    var gid = card.getAttribute('data-gid');
+    var candName = card.getAttribute('data-cand');
+    var qKey = row.getAttribute('data-q');
+    var val = parseInt(btn.getAttribute('data-val'), 10);
+
+    row.querySelectorAll('.score-pill').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+
+    var st = screenState[gid];
+    st.answers[candName][qKey] = val;
+
+    var ans = st.answers[candName];
+    if(ans.d !== null && ans.t !== null){
+      var excluded = (ans.d === 1 || ans.t === 1);
+      card.classList.toggle('excluded', excluded);
+      var resEl = card.querySelector('.screen-result');
+      if(excluded){
+        resEl.hidden = false;
+        resEl.textContent = 'Виключено зі списку голосування.';
+        if(!card.getAttribute('data-backfilled')){
+          card.setAttribute('data-backfilled', '1');
+          if(st.reserve.length){
+            appendScreenCard(gid, st.reserve.shift());
+          }
+        }
+      } else {
+        resEl.hidden = true;
+      }
+    }
+
+    updateScreenContinueState();
+  });
+
+  function updateScreenContinueState(){
+    var allAnswered = true;
+    Object.keys(screenState).forEach(function(gid){
+      var answers = screenState[gid].answers;
+      Object.keys(answers).forEach(function(name){
+        var a = answers[name];
+        if(a.d === null || a.t === null) allAnswered = false;
+      });
+    });
+    screenContinueBtn.disabled = !allAnswered;
+    screenStatus.className = 'form-status';
+    screenStatus.textContent = allAnswered ? '' : 'Дайте відповідь на обидва питання для кожного кандидата.';
+  }
+
+  screenContinueBtn.addEventListener('click', function(){
+    var finalGroups = [];
+    screeningRecords = [];
+    var totalFinal = 0;
+
+    Object.keys(screenState).forEach(function(gid){
+      var st = screenState[gid];
+      var finalCandidates = [];
+      st.order.forEach(function(name){
+        var a = st.answers[name];
+        var excluded = (a.d === 1 || a.t === 1);
+        screeningRecords.push({ candidate: name, group: st.label, disciplinary: a.d === 1, shortTenure: a.t === 1, excluded: excluded });
+        if(!excluded){ finalCandidates.push({ n: name, p: a.p }); totalFinal++; }
+      });
+      if(finalCandidates.length) finalGroups.push({ label: st.label, win: st.win, candidates: finalCandidates });
+    });
+
+    if(totalFinal === 0){
+      screenView.hidden = true;
+      formStatus.className = 'form-status';
+      formStatus.textContent = 'Зберігаємо…';
+      submitTour2(currentEvaluator, [], screeningRecords).then(function(res){
+        if(res && res.status === 'ok'){
+          thanksView.hidden = false;
+        } else {
+          screenView.hidden = false;
+          screenStatus.className = 'form-status err';
+          screenStatus.textContent = (res && res.message) || 'Не вдалося зберегти. Спробуйте ще раз.';
+        }
+      }).catch(function(){
+        screenView.hidden = false;
+        screenStatus.className = 'form-status err';
+        screenStatus.textContent = 'Не вдалося з’єднатися з таблицею. Перевірте інтернет-з’єднання.';
+      });
+      return;
+    }
+
+    screenView.hidden = true;
+    renderGroups(finalGroups);
+    formView.hidden = false;
+  });
 
   function renderGroups(groups){
     state = {};
@@ -602,7 +775,7 @@
     formStatus.className = 'form-status';
     formStatus.textContent = 'Зберігаємо…';
 
-    submitTour2(currentEvaluator, scores).then(function(res){
+    submitTour2(currentEvaluator, scores, screeningRecords).then(function(res){
       if(res && res.status === 'ok'){
         formView.hidden = true;
         thanksView.hidden = false;
