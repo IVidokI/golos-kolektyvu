@@ -400,6 +400,14 @@
       </div>
     </div>
 
+    <div id="closedView" hidden>
+      <div class="thanks">
+        <div class="mark">✓</div>
+        <h2>Голосування завершено</h2>
+        <p>Перший тур анкетування закрито. Дякуємо всім, хто взяв участь!</p>
+      </div>
+    </div>
+
   </main>
 
   <p class="foot">ПСХ · Перший столичний хлібозавод · Анкетування 2026</p>
@@ -614,8 +622,28 @@
   var submitBtn = document.getElementById('submitBtn');
   var formView = document.getElementById('formView');
   var thanksView = document.getElementById('thanksView');
+  var closedView = document.getElementById('closedView');
 
   var FIELDS = ['respondent','q2','q3','q4','q5','q6','q7'];
+  var tour1Closed = false;
+
+  // Перевіряємо одразу при завантаженні, чи закрито 1 тур — щоб не
+  // давати заповнювати форму, яку сервер однаково відхилить. Якщо
+  // мережа підвела — форма лишається доступною, а остаточну заборону
+  // все одно гарантує сервер (doPost) при спробі зберегти.
+  if(storageReady){
+    fetch(APPS_SCRIPT_URL + '?tour1Status=1')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data && data.closed){
+          tour1Closed = true;
+          formView.hidden = true;
+          thanksView.hidden = true;
+          closedView.hidden = false;
+        }
+      })
+      .catch(function(){ /* не критично — доPost все одно заблокує збереження */ });
+  }
 
   function setStatus(msg, kind){
     statusEl.textContent = msg || '';
@@ -668,6 +696,11 @@
       setStatus('Адміністратор ще не підключив збереження відповідей у Google Таблицю.', 'warn');
       return;
     }
+    if(tour1Closed){
+      formView.hidden = true;
+      closedView.hidden = false;
+      return;
+    }
     if(votedBlock){
       setStatus('Ця анкета вже заповнена раніше. Повторне голосування неможливе.', 'err');
       return;
@@ -718,6 +751,11 @@
   });
 
   document.getElementById('againBtn').addEventListener('click', function(){
+    if(tour1Closed){
+      thanksView.hidden = true;
+      closedView.hidden = false;
+      return;
+    }
     thanksView.hidden = true;
     formView.hidden = false;
     resetForm();
