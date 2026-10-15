@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Другий тур — оцінка керівника</title>
+<title>2 етап — оцінка керівника</title>
 <style>
   :root{
     --bordo:#671C32;
@@ -309,14 +309,14 @@
 
   <header class="banner">
     <img class="logo" src="logo-white.png" alt="ЦарХліб">
-    <h1>Другий тур — оцінка керівника</h1>
+    <h1>2 етап — оцінка керівника</h1>
     <p>Оцініть кандидатів, відібраних за результатами голосування колективу у вашому підрозділі.</p>
   </header>
 
   <main class="card">
 
     <div id="step1">
-      <p class="intro">Введіть своє ПІБ — система автоматично покаже лише ваших кандидатів. Попередніх балів 1-го туру ви не побачите.</p>
+      <p class="intro">Введіть своє ПІБ — система автоматично покаже лише ваших кандидатів. Попередніх балів 1-го етапу ви не побачите.</p>
 
       <div class="picker" data-field="evaluator">
         <div class="qlabel"><span class="qnum">1</span><span>Ваше прізвище, ім'я по батькові</span></div>
@@ -332,7 +332,7 @@
 
     <div id="screenView" hidden>
       <div class="intro">
-        <strong>Перед оцінкою</strong> — дайте відповідь на два допускові питання по кожному кандидату. Якщо хоча б одна відповідь — «Так», кандидат не потрапляє до списку оцінювання (а на його місце, якщо можливо, підставиться наступний за голосами 1-го туру).
+        <strong>Перед оцінкою</strong> — дайте відповідь на два допускові питання по кожному кандидату. Якщо хоча б одна відповідь — «Так», кандидат не потрапляє до списку оцінювання (а на його місце, якщо можливо, підставиться наступний за голосами 1-го етапу).
       </div>
       <div id="screenGroupsContainer"></div>
       <div class="submit-row">
@@ -381,7 +381,7 @@
 
   </main>
 
-  <p class="foot">ПСХ · Перший столичний хлібозавод · Другий тур 2026</p>
+  <p class="foot">ПСХ · Перший столичний хлібозавод · 2 етап 2026</p>
 </div>
 
 <script>
@@ -541,7 +541,7 @@
     fetchEvaluator(name).then(function(res){
       if(!res.ok){
         pickerRoot.classList.add('error');
-        step1Status.textContent = res.message || 'Вас не знайдено як керівника 2-го туру.';
+        step1Status.textContent = res.message || 'Вас не знайдено як керівника 2-го етапу.';
         return;
       }
       step1Status.textContent = '';
@@ -598,7 +598,7 @@
     div.innerHTML =
       '<div class="cand-head"><span class="cand-name">' + escapeHtml(cand.n) + '</span><span class="cand-posada">' + escapeHtml(cand.p || '') + '</span></div>' +
       '<div class="crit-row" data-q="d">' +
-        '<span class="crit-label">Чи було порушення трудової дисципліни?</span>' +
+        '<span class="crit-label">Чи було порушення трудової дисципліни (алкофор)?</span>' +
         '<div class="score-pills"><button type="button" class="score-pill" data-val="0">Ні</button><button type="button" class="score-pill" data-val="1">Так</button></div>' +
       '</div>' +
       '<div class="crit-row" data-q="t">' +
